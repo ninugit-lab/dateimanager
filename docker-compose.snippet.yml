@@ -2,6 +2,10 @@
 # Ersetzt dort den nginx-Platzhalter "team2-dateimanagement".
 # Annahme: gemeinsames Traefik-Gateway + letsencrypt-Certresolver wie im Orchestrator.
 
+networks:
+  cpp-edge:
+    external: true
+
   files-db:
     image: postgres:16-alpine
     container_name: files-db
@@ -13,9 +17,11 @@
       - files-db-data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  team2-dateimanagement:
-    build: ./team2-dateimanagement   # Submodule/Build-Context des Team-2-Repos
-    container_name: team2-dateimanagement
+  team2-backend:
+    build:
+      context: ./team2-dateimanagement
+      dockerfile: Dockerfile
+    container_name: team2-backend
     environment:
       PORT: 8002
       PGHOST: files-db
@@ -29,13 +35,26 @@
       AUTH_ALLOW_DEV_HEADER: "false"
     volumes:
       - files-storage:/data/files
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.team2.rule=PathPrefix(`/files`)
-      - traefik.http.routers.team2.tls.certresolver=letsencrypt
-      - traefik.http.services.team2.loadbalancer.server.port=8002
+    depends_on:
+      - files-db
     restart: unless-stopped
 
-# In den globalen volumes-Block des Orchestrators ergänzen:
-#   files-db-data:
-#   files-storage:
+  team2-frontend:
+    build:
+      context: ./team2-dateimanagement
+      dockerfile: Dockerfile.frontend
+    container_name: team2-frontend
+    volumes:
+      - ./shared-styles:/shared-styles:ro
+    depends_on:
+      - team2-backend
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.team2.rule=PathPrefix(`/`)
+      - traefik.http.routers.team2.tls.certresolver=letsencrypt
+      - traefik.http.services.team2.loadbalancer.server.port=80
+    restart: unless-stopped
+
+volumes:
+  files-db-data:
+  files-storage:

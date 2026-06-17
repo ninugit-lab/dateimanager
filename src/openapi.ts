@@ -2,7 +2,7 @@
 export const openapiSpec = {
   openapi: '3.0.3',
   info: { title: 'CPP Dateimanagement (Team 2)', version: '1.0.0' },
-  servers: [{ url: '/files' }],
+  servers: [{ url: '/api/files' }],
   paths: {
     '/health': { get: { summary: 'Health-Check', responses: { '200': { description: 'ok' } } } },
     '/projects/{projectId}/files': {
